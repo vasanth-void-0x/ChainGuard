@@ -1,0 +1,97 @@
+name: ChainGuard Security Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  secret-scan:
+    name: "1. Secret Scanning (Gitleaks)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  code-scan:
+    name: "2. Static Code Analysis (Semgrep)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: .semgrep.yml
+        env:
+          SEMGREP_RULES: .semgrep.yml
+
+  dependency-scan:
+    name: "3. Dependency Vulnerability Scan (Trivy)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy (filesystem scan)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "app/"
+          format: "table"
+          severity: "CRITICAL,HIGH,MEDIUM"
+          exit-code: "1"
+
+  docker-scan:
+    name: "4. Docker Image Scan + SBOM (Trivy + Syft)"
+    runs-on: ubuntu-latest
+    needs: [secret-scan, code-scan, dependency-scan]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t chainguard-demo:${{ github.sha }} ./app
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "chainguard-demo:${{ github.sha }}"
+          format: "table"
+          severity: "CRITICAL,HIGH"
+          exit-code: "1"
+
+      - name: Generate SBOM with Syft
+        uses: anchore/sbom-action@v0
+        with:
+          image: "chainguard-demo:${{ github.sha }}"
+          format: "spdx-json"
+          output-file: "reports/sbom.spdx.json"
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-report
+          path: reports/sbom.spdx.json
+
+  pipeline-summary:
+    name: "5. Pipeline Result"
+    runs-on: ubuntu-latest
+    needs: [secret-scan, code-scan, dependency-scan, docker-scan]
+    if: always()
+    steps:
+      - name: Report status
+        run: |
+          echo "ChainGuard pipeline finished."
+          echo "If any job above failed, the build is considered BLOCKED."
+          echo "Check each job's logs for the specific findings."

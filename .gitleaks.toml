@@ -1,0 +1,18 @@
+title = "ChainGuard Gitleaks Config"
+
+[extend]
+useDefault = true
+
+# Custom rule tuned for this project's demo secret pattern
+[[rules]]
+id = "chainguard-generic-api-key"
+description = "Generic API Key / Secret pattern"
+regex = '''(?i)(api[_-]?key|secret|token|password)\s*[:=]\s*["\']?[A-Za-z0-9_\-]{16,}["\']?'''
+tags = ["key", "secret"]
+
+[allowlist]
+description = "Ignore test/demo fixtures explicitly marked safe"
+paths = [
+  '''\.gitleaks\.toml''',
+  '''README\.md'''
+]

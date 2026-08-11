@@ -1,0 +1,7 @@
+# Intentionally pinned to OLDER versions with known CVEs
+# so Trivy has real findings to report in the demo.
+Flask==2.0.1
+Jinja2==2.11.3
+requests==2.25.1
+urllib3==1.26.4
+Werkzeug==2.0.1
