@@ -6,9 +6,7 @@ rules:
       Hardcoded secret/credential detected. Move to environment variables
       or a secrets manager (.env, GitHub Secrets, Vault).
     patterns:
-      - pattern-either:
-          - pattern: $VAR = "gsk_..."
-          - pattern-regex: '(?i)(api_key|password|secret|token)\s*=\s*["\'][A-Za-z0-9_\-]{12,}["\']'
+      - pattern-regex: "(?i)(api[_-]?key|password|secret|token)\\s*=\\s*[\"'][A-Za-z0-9_-]{12,}[\"']"
 
   - id: sql-injection-string-format
     languages: [python]
@@ -21,6 +19,7 @@ rules:
           - pattern: $CONN.execute("..." % (...))
           - pattern: $CONN.execute(f"...")
           - pattern: $CONN.execute("..." + $VAR)
+          - pattern: $QUERY = "..." % (...)
 
   - id: dangerous-eval-usage
     languages: [python]
