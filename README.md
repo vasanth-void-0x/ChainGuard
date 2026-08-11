@@ -67,6 +67,21 @@ ChainGuard/
 └── README.md
 ```
 
+## Verified pipeline run
+
+This pipeline has been run against the intentionally vulnerable demo app
+in this repo, with the following real results:
+
+| Job | Result | Findings |
+|---|---|---|
+| Secret Scanning (Gitleaks) | ❌ Failed | Hardcoded Groq API key + DB password |
+| Static Code Analysis (Semgrep) | ❌ Failed | 4 findings — hardcoded secret, SQL injection, `eval()` misuse, `debug=True` |
+| Dependency Vulnerability Scan (Trivy) | ❌ Failed | Known CVEs in outdated Flask/Werkzeug/urllib3 |
+| Docker Image Scan + SBOM | ⊘ Skipped | Correctly skipped — upstream jobs failed, so the image was never built/pushed |
+| **Overall pipeline status** | **❌ Failure (build blocked)** | Exactly the intended behavior |
+
+> See a live run: [GitHub Actions run #1](https://github.com/vasanth-void-0x/ChainGuard/actions)
+
 ## How to see it work
 
 1. Push this repo to GitHub.
@@ -88,3 +103,4 @@ logic, and the demo app used to prove it all actually works end-to-end.
 ## Tech stack
 
 GitHub Actions · Gitleaks · Semgrep · Trivy · Syft · Docker · Python (Flask)
+
